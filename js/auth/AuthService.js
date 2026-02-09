@@ -29,11 +29,15 @@ export class AuthService {
     const username = normalize(usernameRaw);
     const initial = (initialRaw || "").trim().slice(0,1).toUpperCase();
 
+    console.log("Intentando registrar usuario:", { username, pass, initial });
+
     if(username.length < 3) return { ok:false, msg:"El usuario debe tener al menos 3 caracteres." };
     if((pass||"").length < 4) return { ok:false, msg:"La contraseña debe tener al menos 4 caracteres." };
     if(!initial) return { ok:false, msg:"Escribe una inicial para tu avatar." };
 
     const users = this.storage.loadUsers();
+    console.log("Usuarios cargados:", users);
+
     if(users[username]) return { ok:false, msg:"Ese usuario ya existe. Prueba otro." };
 
     users[username] = {
@@ -48,18 +52,32 @@ export class AuthService {
     };
     this.storage.saveUsers(users);
 
+    console.log("Usuario registrado exitosamente:", users[username]);
+
     return { ok:true, msg:"Cuenta creada. Ahora inicia sesión.", username };
   }
 
   login({ usernameRaw, pass }){
     const username = normalize(usernameRaw);
+    console.log("Intentando iniciar sesión con usuario:", username);
+
     const users = this.storage.loadUsers();
+    console.log("Usuarios cargados para login:", users);
+
     const u = users[username];
 
-    if(!u) return { ok:false, msg:"Usuario no encontrado." };
-    if(u.passHash !== simpleHash(pass||"")) return { ok:false, msg:"Contraseña incorrecta." };
+    if(!u) {
+      console.error("Usuario no encontrado:", username);
+      return { ok:false, msg:"Usuario no encontrado." };
+    }
+    if(u.passHash !== simpleHash(pass||"")) {
+      console.error("Contraseña incorrecta para usuario:", username);
+      return { ok:false, msg:"Contraseña incorrecta." };
+    }
 
     this.storage.saveSession({ username });
+    console.log("Sesión iniciada para usuario:", username);
+
     return { ok:true, msg:"Sesión iniciada.", user: u };
   }
 
