@@ -56,7 +56,9 @@ export class UIController {
       regInitial: this.$("#regInitial"),
 
       facePicker: this.$("#facePicker"),
+      outfitPicker: this.$("#outfitPicker"),   // 👈 NUEVO
       colorPicker: this.$("#colorPicker"),
+
 
       rulesCard: this.$("#rulesCard")
     };
@@ -70,48 +72,84 @@ export class UIController {
     this.mountAvatarPickers();
     this.restoreSessionIfAny();
     this.renderAll();
+    this.el.rulesCard.classList.add("rulesHidden");
+    this.el.btnRules.setAttribute("aria-expanded","false");
+    // Arrancar con reglas ocultas y preguntas centradas
+this.el.rulesCard.classList.add("rulesHidden");
+this.el.rulesCard.style.display = "none";
+
+const grid = document.querySelector("main.grid");
+grid.style.gridTemplateColumns = "minmax(0, 760px)";
+grid.style.justifyContent = "center";
+
+this.el.btnRules.setAttribute("aria-expanded","false");
+
   }
 
-  bindEvents(){
-    // auth open/close
-    this.el.btnOpenAuth.addEventListener("click", () => this.openAuth());
-    this.el.btnCloseAuth1.addEventListener("click", () => this.closeAuth());
-    this.el.btnCloseAuth2.addEventListener("click", () => this.closeAuth());
-    this.el.overlay.addEventListener("click", (e) => {
-      if(e.target === this.el.overlay) this.closeAuth();
-    });
+  toggleRules(){
+  const grid = document.querySelector("main.grid");
 
-    // tabs
-    this.el.tabLogin.addEventListener("click", () => this.switchTab("login"));
-    this.el.tabRegister.addEventListener("click", () => this.switchTab("register"));
+  const willHide = !this.el.rulesCard.classList.contains("rulesHidden");
 
-    // actions
-    this.el.btnLogin.addEventListener("click", () => this.handleLogin());
-    this.el.btnRegister.addEventListener("click", () => this.handleRegister());
+  if(willHide){
+    // Ocultar: quitar del layout (NO solo invisible)
+    this.el.rulesCard.classList.add("rulesHidden");
+    this.el.rulesCard.style.display = "none";
 
-    this.el.btnLogout.addEventListener("click", () => this.handleLogout());
-    this.el.btnReset.addEventListener("click", () => {
-      if(!this.quiz.isLoggedIn()) return this.toast.show("Primero inicia sesión.");
-      this.quiz.resetLevel();
-      this.clearFeedback();
-      this.renderAll();
-    });
+    // Centrar preguntas
+    grid.style.gridTemplateColumns = "minmax(0, 760px)";
+    grid.style.justifyContent = "center";
+  } else {
+    // Mostrar: volver al layout
+    this.el.rulesCard.classList.remove("rulesHidden");
+    this.el.rulesCard.style.display = "";
 
-    this.el.btnRules.addEventListener("click", () => {
-      this.el.rulesCard.scrollIntoView({ behavior:"smooth", block:"start" });
-    });
-
-    // quiz nav
-    this.el.btnNext.addEventListener("click", () => this.next());
-    this.el.btnSkip.addEventListener("click", () => this.skip());
+    // Regresar a 2 columnas
+    grid.style.gridTemplateColumns = "";
+    grid.style.justifyContent = "";
   }
 
-  mountAvatarPickers(){
-    this.avatarService.mountPickers({
-      faceContainer: this.el.facePicker,
-      colorContainer: this.el.colorPicker
-    });
-  }
+  this.el.btnRules.setAttribute("aria-expanded", willHide ? "false" : "true");
+}
+
+
+bindEvents(){
+  // auth open/close
+  this.el.btnOpenAuth.addEventListener("click", () => this.openAuth());
+  this.el.btnCloseAuth1.addEventListener("click", () => this.closeAuth());
+  this.el.btnCloseAuth2.addEventListener("click", () => this.closeAuth());
+
+  // ✅ SOLO ESTE PARA REGLAS
+  this.el.btnRules.addEventListener("click", () => this.toggleRules());
+
+  // tabs
+  this.el.tabLogin.addEventListener("click", () => this.switchTab("login"));
+  this.el.tabRegister.addEventListener("click", () => this.switchTab("register"));
+
+  // actions
+  this.el.btnLogin.addEventListener("click", () => this.handleLogin());
+  this.el.btnRegister.addEventListener("click", () => this.handleRegister());
+
+  this.el.btnLogout.addEventListener("click", () => this.handleLogout());
+  this.el.btnReset.addEventListener("click", () => {
+    if(!this.quiz.isLoggedIn()) return this.toast.show("Primero inicia sesión.");
+    this.quiz.resetLevel();
+    this.clearFeedback();
+    this.renderAll();
+  });
+
+  // quiz nav
+  this.el.btnNext.addEventListener("click", () => this.next());
+  this.el.btnSkip.addEventListener("click", () => this.skip());
+}
+
+ mountAvatarPickers(){
+  this.avatarService.mountPickers({
+    faceContainer: this.el.facePicker,
+    outfitContainer: this.el.outfitPicker, // 👈 NUEVO
+    colorContainer: this.el.colorPicker
+  });
+}
 
   restoreSessionIfAny(){
     const r = this.auth.tryRestoreSession();
@@ -330,32 +368,50 @@ export class UIController {
   }
 
   answerMCQ(index){
-    if(!this.lastQuestion) return;
-    const res = this.quiz.submitAnswer(this.lastQuestion, { index });
+  if(!this.lastQuestion) return;
+  const res = this.quiz.submitAnswer(this.lastQuestion, { index });
 
-    if(res.correct) this.setFeedback("ok", res.title, res.desc);
-    else this.setFeedback("bad", res.title, res.desc);
+  if(res.correct){
+    this.setFeedback("ok", res.title, res.desc);
 
-    if(res.endedByLives){
-      this.setFeedback("bad", "Te quedaste sin vidas", "Reinicia el nivel para intentarlo de nuevo y revisa las explicaciones.");
-      this.el.btnNext.disabled = true;
-      this.el.btnSkip.disabled = true;
-      this.renderHUD();
-      return;
-    }
+    // ✨ EFECTO SPARKLE EN EL AVATAR
+    this.el.hudAvatar.classList.remove("sparkle");
+    void this.el.hudAvatar.offsetWidth; // fuerza reflow para reiniciar animación
+    this.el.hudAvatar.classList.add("sparkle");
 
-    this.awaitingNext = true;
-    this.el.btnNext.disabled = false;
+  } else {
+    this.setFeedback("bad", res.title, res.desc);
+  }
+
+  if(res.endedByLives){
+    this.setFeedback("bad", "Te quedaste sin vidas", "Reinicia el nivel para intentarlo de nuevo y revisa las explicaciones.");
+    this.el.btnNext.disabled = true;
     this.el.btnSkip.disabled = true;
     this.renderHUD();
+    return;
   }
+
+  this.awaitingNext = true;
+  this.el.btnNext.disabled = false;
+  this.el.btnSkip.disabled = true;
+  this.renderHUD();
+}
+
 
   answerInput(value){
     if(!this.lastQuestion) return;
     const res = this.quiz.submitAnswer(this.lastQuestion, { value });
 
-    if(res.correct) this.setFeedback("ok", res.title, res.desc);
-    else this.setFeedback("bad", res.title, res.desc);
+   if(res.correct){
+  this.setFeedback("ok", res.title, res.desc);
+
+  this.el.hudAvatar.classList.remove("sparkle");
+  void this.el.hudAvatar.offsetWidth;
+  this.el.hudAvatar.classList.add("sparkle");
+
+} else {
+  this.setFeedback("bad", res.title, res.desc);
+}
 
     if(res.endedByLives){
       this.setFeedback("bad", "Te quedaste sin vidas", "Reinicia el nivel para intentarlo de nuevo y revisa las explicaciones.");

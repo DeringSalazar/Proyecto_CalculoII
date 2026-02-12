@@ -328,3 +328,125 @@ header{
   line-height: 1.25;
 }
 .toast.show{ display:block; }
+
+/* ===== Animaciones de personajes ===== */
+@keyframes floaty {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-2.5px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes blink {
+  0%, 92%, 100% { opacity: 1; }
+  94%, 96% { opacity: 0; }
+}
+
+.skin.a-float { animation: floaty 2.4s ease-in-out infinite; }
+.skin .a-blink { animation: blink 4.2s infinite; }
+
+/* Hover del avatar HUD */
+.avatar:hover{
+  transform: translateY(-1px);
+  transition: transform .12s ease;
+}
+
+/* Picker: hover + pop */
+.faceBtn{
+  transform: translateY(0);
+}
+.faceBtn:hover{
+  transform: translateY(-2px) scale(1.04);
+}
+@keyframes pop {
+  0% { transform: scale(1); }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1.02); }
+}
+.faceBtn.active{
+  animation: pop .18s ease-out;
+}
+@keyframes sparkle {
+  0% { box-shadow: 0 0 0 rgba(255,255,255,0); }
+  50% { box-shadow: 0 0 0 8px rgba(255,255,255,.18); }
+  100% { box-shadow: 0 0 0 rgba(255,255,255,0); }
+}
+
+.avatar.sparkle{
+  animation: sparkle .35s ease-out;
+}
+.outfits{ display:flex; gap:8px; flex-wrap:wrap; }
+
+.avatarStage .skin,
+.avatarStage .outfit{
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+/* si tus SVG traen class="skin a-float" */
+.skin.a-float { animation: floaty 2.4s ease-in-out infinite; }
+
+.outfitLayer{
+  transform: translateY(0);
+  animation: outfitBob 2.4s ease-in-out infinite;
+}
+@keyframes outfitBob{
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-1.5px); }
+  100% { transform: translateY(0); }
+}
+/* Botón Reglas fijo abajo a la derecha */
+#btnRules{
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 200;
+  border-radius: 999px;
+  padding: 12px 14px;
+  box-shadow: 0 18px 45px rgba(0,0,0,.35);
+}
+/* Panel reglas: animación show/hide */
+#rulesCard{
+  max-height: 2000px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height .35s ease, opacity .25s ease, transform .25s ease,
+              padding .35s ease, margin .35s ease, border-width .35s ease;
+  overflow: hidden;
+}
+
+#rulesCard.rulesHidden{
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  padding: 0;
+  margin: 0;
+  border-width: 0;
+  pointer-events: none;
+}
+/* ===== MODO 1 COLUMNA (reglas ocultas) ===== */
+.grid.singleColumn{
+  grid-template-columns: 1fr;
+}
+
+/* Centra la sección de preguntas sí o sí */
+.grid.singleColumn > section.card{
+  width: min(760px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* por si el aside sigue ocupando espacio visual */
+.grid.singleColumn > aside.card{
+  display: none;
+}
+#rulesCard.rulesHidden{
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(8px);
+  padding: 0;
+  margin: 0;
+  border-width: 0;
+  pointer-events: none;
+}
+

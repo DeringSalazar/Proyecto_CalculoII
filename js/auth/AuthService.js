@@ -44,10 +44,10 @@ export class AuthService {
       username,
       passHash: simpleHash(pass),
       avatar: {
-        face: this.avatarService.selectedFace,
-        color: this.avatarService.selectedColor,
-        initial
-      },
+         skinId: this.avatarService.selectedSkin,
+         color: this.avatarService.selectedColor,
+         initial
+     },
       progress: { level: 1, points: 0 }
     };
     this.storage.saveUsers(users);

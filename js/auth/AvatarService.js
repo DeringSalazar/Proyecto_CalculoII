@@ -1,54 +1,154 @@
 export class AvatarService {
-  constructor({ faces, colors }) {
-    this.faces = faces;
+  constructor({ skins, outfits = [], colors }) {
+    this.skins = skins;        // personajes base
+    this.outfits = outfits;    // 👈 ropa
     this.colors = colors;
 
-    this.selectedFace = faces[2] ?? "🙂";
-    this.selectedColor = colors[0] ?? "#1E85CA";
+    this.selectedSkin = skins?.[0]?.id ?? "wizard";
+    this.selectedOutfit = outfits?.[0]?.id ?? "none";   // 👈 NUEVO
+    this.selectedColor = colors?.[0] ?? "#1E85CA";
   }
 
-  setFace(face) { this.selectedFace = face; }
+  setSkin(id) { this.selectedSkin = id; }
+  setOutfit(id) { this.selectedOutfit = id; }   // 👈 NUEVO
   setColor(color) { this.selectedColor = color; }
 
-  renderAvatar(el, { face, color, initial }) {
-    el.style.background = `linear-gradient(135deg, ${color}, rgba(255,255,255,.10))`;
-    el.style.borderColor = "rgba(255,255,255,.22)";
+  getSkinById(id){
+    return this.skins.find(s => s.id === id) || this.skins[0];
+  }
+
+  getOutfitById(id){
+    if(!this.outfits?.length) return null;
+    return this.outfits.find(o => o.id === id) || this.outfits[0];
+  }
+
+  renderAvatar(el, { skinId, outfitId, color, initial } = {}) {
+
+    const finalSkinId = skinId || this.selectedSkin;
+    const finalOutfitId = outfitId || this.selectedOutfit;
+
+    const skin = this.getSkinById(finalSkinId);
+    const outfit = this.getOutfitById(finalOutfitId);
+
+    const init = (initial || "").toUpperCase();
+    const c = color || this.selectedColor;
+
+    el.style.position = "relative";
+    el.style.overflow = "hidden";
+    el.style.borderRadius = "18px";
+    el.style.border = "2px solid rgba(255,255,255,.40)";
+    el.style.boxShadow =
+      "0 12px 24px rgba(0,0,0,.28), inset 0 2px 0 rgba(255,255,255,.22)";
+
+    el.style.background = `
+      radial-gradient(120% 120% at 20% 15%, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 45%),
+      linear-gradient(135deg, ${c} 0%, rgba(0,0,0,.28) 100%)
+    `;
+
     el.innerHTML = `
-      <div style="display:grid; gap:2px; place-items:center; width:100%; height:100%;">
-        <div aria-hidden="true" style="font-size:18px; line-height:1;">${face}</div>
-        <div aria-hidden="true" style="font-size:11px; font-weight:900; opacity:.95;">${(initial||"").toUpperCase()}</div>
+      <div style="
+        position:absolute; inset:-25%;
+        background: radial-gradient(circle at 30% 25%, rgba(255,255,255,.45), transparent 55%);
+        transform: rotate(-12deg);
+        pointer-events:none;
+      "></div>
+
+      <div style="display:grid; place-items:center; width:100%; height:100%;">
+        
+        <!-- 👇 AQUÍ se combinan las capas -->
+        <div style="position:relative; width:38px; height:38px;">
+          
+          <!-- PERSONAJE BASE -->
+          <div style="position:absolute; inset:0;">
+            ${skin?.svg || ""}
+          </div>
+
+          <!-- ROPA -->
+          ${outfit?.svg ? `
+            <div style="position:absolute; inset:0;">
+              ${outfit.svg}
+            </div>
+          ` : ""}
+
+        </div>
+
+        <div aria-hidden="true" style="
+          margin-top:4px;
+          font-size:11px;
+          font-weight:900;
+          letter-spacing:.08em;
+          padding:4px 8px;
+          border-radius:999px;
+          background: rgba(0,0,0,.18);
+          border: 1px solid rgba(255,255,255,.22);
+          color: rgba(255,255,255,.95);
+          backdrop-filter: blur(6px);
+        ">${init}</div>
+
       </div>
     `;
   }
 
-  mountPickers({ faceContainer, colorContainer, onChange }) {
+  mountPickers({ faceContainer, outfitContainer, colorContainer, onChange }) {
+
+    /* ===== SKINS ===== */
     faceContainer.innerHTML = "";
-    this.faces.forEach((f) => {
+    this.skins.forEach((s) => {
       const b = document.createElement("button");
       b.type = "button";
-      b.className = "faceBtn" + (f === this.selectedFace ? " active" : "");
-      b.textContent = f;
+      b.className = "faceBtn" + (s.id === this.selectedSkin ? " active" : "");
+      b.innerHTML = `<div style="width:26px;height:26px">${s.svg}</div>`;
+      b.title = s.name;
+
       b.addEventListener("click", () => {
-        this.setFace(f);
-        [...faceContainer.querySelectorAll(".faceBtn")].forEach(x => x.classList.remove("active"));
+        this.setSkin(s.id);
+        [...faceContainer.querySelectorAll(".faceBtn")]
+          .forEach(x => x.classList.remove("active"));
         b.classList.add("active");
         onChange?.();
       });
+
       faceContainer.appendChild(b);
     });
 
+    /* ===== ROPA ===== */
+    if(outfitContainer){
+      outfitContainer.innerHTML = "";
+      this.outfits.forEach((o) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "faceBtn" + (o.id === this.selectedOutfit ? " active" : "");
+        b.innerHTML = `<div style="width:26px;height:26px">${o.svg || ""}</div>`;
+        b.title = o.name;
+
+        b.addEventListener("click", () => {
+          this.setOutfit(o.id);
+          [...outfitContainer.querySelectorAll(".faceBtn")]
+            .forEach(x => x.classList.remove("active"));
+          b.classList.add("active");
+          onChange?.();
+        });
+
+        outfitContainer.appendChild(b);
+      });
+    }
+
+    /* ===== COLORES ===== */
     colorContainer.innerHTML = "";
     this.colors.forEach((c) => {
-      const s = document.createElement("div");
-      s.className = "swatch" + (c === this.selectedColor ? " active" : "");
-      s.style.background = c;
-      s.addEventListener("click", () => {
+      const sw = document.createElement("div");
+      sw.className = "swatch" + (c === this.selectedColor ? " active" : "");
+      sw.style.background = c;
+
+      sw.addEventListener("click", () => {
         this.setColor(c);
-        [...colorContainer.querySelectorAll(".swatch")].forEach(x => x.classList.remove("active"));
-        s.classList.add("active");
+        [...colorContainer.querySelectorAll(".swatch")]
+          .forEach(x => x.classList.remove("active"));
+        sw.classList.add("active");
         onChange?.();
       });
-      colorContainer.appendChild(s);
+
+      colorContainer.appendChild(sw);
     });
   }
 }
