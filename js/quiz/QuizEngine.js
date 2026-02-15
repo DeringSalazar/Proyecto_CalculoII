@@ -83,8 +83,21 @@ export class QuizEngine {
     return true;
   }
 
-  resetLevel(){
+  resetLevel(level){
     if(!this.user) return;
+
+    if(level && level !== this.level){
+      // remove answered prompts that belong to the specified level
+      const lvlQs = this.bank.getByLevel(level) || [];
+      for(const q of lvlQs){
+        this.answeredPrompts.delete(q.prompt);
+      }
+      this.toast.show(`Nivel ${level} reiniciado.`);
+      this.persistProgress();
+      return;
+    }
+
+    // default: reset the current level (original behavior)
     this.startLevel(this.level);
     this.toast.show("Nivel reiniciado. ¡A practicar!");
   }

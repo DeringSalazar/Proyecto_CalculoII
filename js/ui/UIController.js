@@ -100,9 +100,7 @@ bindEvents(){
   this.el.btnLogout.addEventListener("click", () => this.handleLogout());
   this.el.btnReset.addEventListener("click", () => {
     if(!this.quiz.isLoggedIn()) return this.toast.show("Primero inicia sesión.");
-    this.quiz.resetLevel();
-    this.clearFeedback();
-    this.renderAll();
+    this.openResetModal();
   });
 
   // quiz nav
@@ -113,14 +111,37 @@ bindEvents(){
 // Esto es para el podio gente 
 createPodiumPanel(){
   if(!document.getElementById("podiumPanel")){
-    const div = document.createElement("div");
+    const div = document.createElement("aside");
     div.id = "podiumPanel";
-    div.className = "podium-panel";
+    div.className = "card podium-panel";
     div.innerHTML = `
-      <h2>🏆 Podio Global Detallado</h2>
+      <div class="podium-head">
+        <h2 id="podiumTitle">🏆 Podio</h2>
+        <div class="podium-controls">
+          <label for="podiumViewSelect" class="small">Ver:</label>
+          <select id="podiumViewSelect">
+            <option value="current">Nivel actual</option>
+            <option value="global">Global</option>
+            <option value="1">Nivel 1</option>
+            <option value="2">Nivel 2</option>
+            <option value="3">Nivel 3</option>
+          </select>
+        </div>
+      </div>
       <div id="podiumList" class="podium-list"></div>
     `;
-    document.body.appendChild(div);
+    const mainGrid = document.querySelector("main.grid");
+    if(mainGrid){
+      mainGrid.appendChild(div);
+    } else {
+      document.body.appendChild(div);
+    }
+
+    // attach change handler
+    const sel = div.querySelector('#podiumViewSelect');
+    if(sel){
+      sel.addEventListener('change', () => this.renderPodium());
+    }
   }
 }
 
@@ -130,7 +151,26 @@ renderPodium(){
   const list = document.getElementById("podiumList");
   list.innerHTML = "";
 
-  const top = this.podiumService.getTopPlayers();
+  // Decide vista según selector
+  const sel = document.getElementById('podiumViewSelect');
+  const view = sel ? sel.value : 'current';
+  let top = [];
+  const titleEl = document.getElementById("podiumTitle");
+
+  if(view === 'global'){
+    top = this.podiumService.getGlobalTop();
+    if(titleEl) titleEl.textContent = `🏆 Podio — Global`;
+  } else if(view === 'current'){
+    const level = this.quiz?.level ?? 1;
+    top = this.podiumService.getTopPlayers(level);
+    if(titleEl) titleEl.textContent = `🏆 Podio — Nivel ${level}`;
+    // ensure selector reflects actual current level label
+    if(sel) sel.value = 'current';
+  } else {
+    const lvl = Number(view) || 1;
+    top = this.podiumService.getTopPlayers(lvl);
+    if(titleEl) titleEl.textContent = `🏆 Podio — Nivel ${lvl}`;
+  }
 
   top.forEach((player, index) => {
     const position = index + 1;
@@ -162,6 +202,64 @@ renderPodium(){
     colorContainer: this.el.colorPicker
   });
 }
+
+  // -------------------------
+  // Reset modal (choose level to reset)
+  // -------------------------
+  createResetModal(){
+    if(document.getElementById('resetModal')) return;
+
+    const ov = document.createElement('div');
+    ov.id = 'resetModal';
+    ov.className = 'overlay';
+    ov.setAttribute('role','dialog');
+    ov.setAttribute('aria-modal','true');
+    ov.innerHTML = `
+      <div class="card" style="max-width:420px;margin:16px;">
+        <h2>Reiniciar nivel</h2>
+        <p class="muted">Elige qué nivel quieres reiniciar. Reiniciar un nivel eliminará las preguntas respondidas para ese nivel.</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;">
+          <button class="btn" data-level="current">Reiniciar nivel actual</button>
+          <button class="btn" data-level="1">Reiniciar Nivel 1</button>
+          <button class="btn" data-level="2">Reiniciar Nivel 2</button>
+          <button class="btn" data-level="3">Reiniciar Nivel 3</button>
+          <button class="btn ghost" data-level="cancel">Cancelar</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(ov);
+
+    ov.addEventListener('click', (e) => {
+      if(e.target === ov) this.closeResetModal();
+      const btn = e.target.closest('button[data-level]');
+      if(!btn) return;
+      const lvl = btn.dataset.level;
+      if(lvl === 'cancel') return this.closeResetModal();
+      if(lvl === 'current') return this.handleResetLevel();
+      const n = Number(lvl);
+      if(Number.isInteger(n)) return this.handleResetLevel(n);
+    });
+  }
+
+  openResetModal(){
+    this.createResetModal();
+    const m = document.getElementById('resetModal');
+    if(m) m.classList.add('show');
+  }
+
+  closeResetModal(){
+    const m = document.getElementById('resetModal');
+    if(m) m.classList.remove('show');
+  }
+
+  handleResetLevel(level){
+    // level undefined -> current
+    this.quiz.resetLevel(level);
+    this.closeResetModal();
+    this.clearFeedback();
+    this.renderAll();
+  }
 
   restoreSessionIfAny(){
     const r = this.auth.tryRestoreSession();
@@ -233,6 +331,7 @@ renderPodium(){
   renderAll(){
     this.renderHUD();
     this.renderQuestion();
+    this.renderPodium();
   }
 
   renderHUD(){
@@ -314,7 +413,7 @@ renderQuestion() {
         lives: this.quiz.lives,
         correct: this.quiz.correctCount,
         incorrect: this.quiz.incorrectCount
-      });
+      }, this.quiz.level);
     }
 
     // 🔥 Mostrar podio en panel flotante
@@ -428,7 +527,7 @@ answerMCQ(index) {
         lives: this.quiz.lives,
         correct: this.quiz.correctCount,
         incorrect: this.quiz.incorrectCount
-      });
+      }, this.quiz.level);
     }
 
     // 🔥 Mostrar podio
@@ -487,7 +586,7 @@ answerInput(value) {
         lives: this.quiz.lives,
         correct: this.quiz.correctCount,
         incorrect: this.quiz.incorrectCount
-      });
+      }, this.quiz.level);
     }
 
     // 🔥 Mostrar podio
@@ -637,8 +736,12 @@ answerInput(value) {
       if(this.quiz.user){
         this.podiumService.savePlayer({
           username: this.quiz.user.username,
-          points: this.quiz.points
-        });
+          points: this.quiz.points,
+          level: this.quiz.level,
+          lives: this.quiz.lives,
+          correct: this.quiz.correctCount,
+          incorrect: this.quiz.incorrectCount
+        }, this.quiz.level);
       }
 
       // 🔥 Mostrar podio
