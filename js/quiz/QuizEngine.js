@@ -90,43 +90,47 @@ export class QuizEngine {
     // return: { correct, earned, lives, points, title, desc, endedByLives, levelCompleted }
     let correct = false;
 
-    if(question.type === "mcq"){
-      correct = payload.index === question.answerIndex;
-    } else if(question.type === "input"){
-      correct = !!question.validate(payload.value);
-    }
+  if(question.type === "mcq"){
+    correct = payload.index === question.answerIndex;
+  } 
+  else if(question.type === "input"){
+    correct = !!question.validate(payload.value);
+  }
 
-    if(correct){
-      const earned = question.points ?? 10;
-      this.points += earned;
-      this.answeredPrompts.add(question.prompt);
-      this.persistProgress();
+  // 🔒 Marcar SIEMPRE como respondida
+  this.answeredPrompts.add(question.prompt);
 
-      return {
-        correct:true,
-        earned,
-        lives:this.lives,
-        points:this.points,
-        title:`¡Correcto! +${earned} pts`,
-        desc: question.explainOk || "Bien hecho.",
-        endedByLives:false,
-        levelCompleted: this.isLevelComplete()
-      };
-    }
+  if(correct){
+    const earned = question.points ?? 10;
+    this.points += earned;
+    this.persistProgress();
 
-    this.lives = Math.max(0, this.lives - 1);
-
-    const endedByLives = (this.lives === 0);
     return {
-      correct:false,
-      earned:0,
-      lives:this.lives,
-      points:this.points,
-      title:"Incorrecto ❌",
-      desc: question.explainBad || "Revisa el procedimiento.",
-      endedByLives,
-      levelCompleted:false
+      correct: true,
+      earned,
+      lives: this.lives,
+      points: this.points,
+      title: `¡Correcto! +${earned} pts`,
+      desc: question.explainOk || "Bien hecho.",
+      endedByLives: false,
+      levelCompleted: this.isLevelComplete()
     };
+  }
+
+  // ❌ Incorrecta
+  this.lives = Math.max(0, this.lives - 1);
+  const endedByLives = (this.lives === 0);
+
+  return {
+    correct: false,
+    earned: 0,
+    lives: this.lives,
+    points: this.points,
+    title: "Incorrecto ❌",
+    desc: question.explainBad || "Revisa el procedimiento.",
+    endedByLives,
+    levelCompleted: false
+  };
   }
 
   skipQuestion(question){

@@ -1,9 +1,13 @@
+import { PodiumService } from "../podium/PodiumService.js";
+
+
 export class UIController {
   constructor({ toast, auth, quiz, avatarService }){
     this.toast = toast;
     this.auth = auth;
     this.quiz = quiz;
     this.avatarService = avatarService;
+    this.podiumService = new PodiumService();
 
     // DOM
     this.$ = (s) => document.querySelector(s);
@@ -105,6 +109,49 @@ bindEvents(){
   this.el.btnNext.addEventListener("click", () => this.next());
   this.el.btnSkip.addEventListener("click", () => this.skip());
 }
+
+// Esto es para el podio gente 
+createPodiumContainer(){
+  if(!document.getElementById("podiumContainer")){
+    const div = document.createElement("div");
+    div.id = "podiumContainer";
+    div.innerHTML = `
+      <h2>🏆 Podio Global</h2>
+      <div id="podiumList" class="podium-list"></div>
+    `;
+    document.body.appendChild(div);
+  }
+}
+
+renderPodium(){
+  this.createPodiumContainer();
+
+  const list = document.getElementById("podiumList");
+  list.innerHTML = "";
+
+  const top = this.podiumService.getTopPlayers();
+
+  top.forEach((player, index) => {
+    const position = index + 1;
+
+    let medal = "";
+    if(position === 1) medal = "🥇";
+    if(position === 2) medal = "🥈";
+    if(position === 3) medal = "🥉";
+
+    const item = document.createElement("div");
+    item.className = "podium-item";
+    item.innerHTML = `
+      <h3>${medal} ${position}° Lugar</h3>
+      <p>👤 ${player.username}</p>
+      <p>⭐ ${player.points} pts</p>
+    `;
+
+    list.appendChild(item);
+  });
+}
+
+
 
  mountAvatarPickers(){
   this.avatarService.mountPickers({
@@ -232,122 +279,202 @@ bindEvents(){
   }
 
   renderQuestion(){
-    this.el.btnNext.disabled = true;
-    this.el.btnSkip.disabled = true;
-    this.awaitingNext = false;
-    this.lastQuestion = null;
+  this.el.btnNext.disabled = true;
+  this.el.btnSkip.disabled = true;
+  this.awaitingNext = false;
+  this.lastQuestion = null;
 
-    if(!this.quiz.isLoggedIn()){
-      this.el.diffBadge.textContent = "—";
-      this.el.diffBadge.className = "badge";
-      this.el.qCounter.textContent = "—";
-      this.el.qPrompt.textContent = "Inicia sesión para comenzar.";
-      this.el.qBody.innerHTML = "";
-      return;
-    }
-
-    // si completó nivel
-    if(this.quiz.isLevelComplete()){
-      if(this.quiz.canAdvance()){
-        this.setFeedback("ok", "¡Nivel completado!", "Presiona “Siguiente” para pasar al próximo nivel.");
-        this.el.qPrompt.textContent = "Has completado el nivel.";
-        this.el.qBody.innerHTML = "";
-        this.el.btnNext.disabled = false;
-        return;
-      }
-
-      this.setFeedback("ok", "¡Juego completado!", "Terminaste todos los niveles. Reinicia nivel para practicar o mejorar puntaje.");
-      this.el.qPrompt.textContent = "Fin del recorrido.";
-      this.el.qBody.innerHTML = "";
-      this.el.btnNext.disabled = true;
-      return;
-    }
-
-    const q = this.quiz.getNextQuestion();
-    if(!q){
-      this.el.qPrompt.textContent = "Sin preguntas disponibles.";
-      this.el.qBody.innerHTML = "";
-      return;
-    }
-
-    this.lastQuestion = q;
-
-    // badges
-    this.el.diffBadge.textContent = q.diff;
-    this.el.diffBadge.className = `badge ${q.diff === "Fácil" ? "easy" : q.diff === "Medio" ? "mid" : "hard"}`;
-
-    const prog = this.quiz.getProgress();
-    this.el.qCounter.textContent = `Pregunta ${prog.done + 1} de ${prog.total}`;
-
-    this.el.qPrompt.textContent = q.prompt;
+  if(!this.quiz.isLoggedIn()){
+    this.el.qPrompt.textContent = "Inicia sesión para comenzar.";
     this.el.qBody.innerHTML = "";
-
-    if(q.type === "mcq"){
-      const wrap = document.createElement("div");
-      wrap.className = "choices";
-      q.choices.forEach((c, idx) => {
-        const btn = document.createElement("button");
-        btn.type = "button";
-        btn.className = "choice";
-        btn.textContent = c;
-        btn.addEventListener("click", () => this.answerMCQ(idx));
-        wrap.appendChild(btn);
-      });
-      this.el.qBody.appendChild(wrap);
-    }
-
-    if(q.type === "input"){
-      const row = document.createElement("div");
-      row.className = "inputRow";
-
-      const input = document.createElement("input");
-      input.placeholder = q.placeholder || "Escribe tu respuesta";
-      input.id = "freeInput";
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "btn primary";
-      btn.textContent = "Verificar";
-      btn.addEventListener("click", () => this.answerInput(input.value));
-
-      input.addEventListener("keydown", (e) => {
-        if(e.key === "Enter"){
-          e.preventDefault();
-          btn.click();
-        }
-      });
-
-      row.appendChild(input);
-      row.appendChild(btn);
-      this.el.qBody.appendChild(row);
-
-      const hint = document.createElement("div");
-      hint.className = "small muted";
-      hint.textContent = "Tip: Ejemplos válidos: sen(x), ln|x|, x";
-      this.el.qBody.appendChild(hint);
-    }
-
-    this.el.btnSkip.disabled = false;
+    return;
   }
 
+  // 🟢 NIVEL COMPLETADO
+  if(this.quiz.isLevelComplete()){
+
+    // Puede avanzar de nivel
+    if(this.quiz.canAdvance()){
+      this.setFeedback("ok", "¡Nivel completado!", "Presiona “Siguiente” para avanzar.");
+      this.el.btnNext.disabled = false;
+      return;
+    }
+
+    // 🏆 JUEGO COMPLETADO TOTAL
+    this.setFeedback("ok", "¡Juego completado!", "Terminaste todos los niveles.");
+
+    // 🔥 Guardar en podio
+    if(this.quiz.user){
+      this.podiumService.savePlayer({
+        username: this.quiz.user.username,
+        points: this.quiz.points
+      });
+    }
+
+    // 🔥 Mostrar podio
+    this.renderPodium();
+
+    this.el.btnNext.disabled = true;
+    this.el.btnSkip.disabled = true;
+    return;
+  }
+
+  // 🔵 Cargar siguiente pregunta
+  const q = this.quiz.getNextQuestion();
+  if(!q){
+    this.el.qPrompt.textContent = "Sin preguntas disponibles.";
+    this.el.qBody.innerHTML = "";
+    return;
+  }
+
+  this.lastQuestion = q;
+  this.el.qPrompt.textContent = q.prompt;
+  this.el.qBody.innerHTML = "";
+
+  // ===============================
+  // MULTIPLE CHOICE
+  // ===============================
+  if(q.type === "mcq"){
+    const wrap = document.createElement("div");
+    wrap.className = "choices";
+
+    q.choices.forEach((c, idx) => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "choice";
+      btn.textContent = c;
+
+      btn.addEventListener("click", () => this.answerMCQ(idx));
+
+      wrap.appendChild(btn);
+    });
+
+    this.el.qBody.appendChild(wrap);
+  }
+
+  // ===============================
+  // INPUT TYPE
+  // ===============================
+  if(q.type === "input"){
+    const row = document.createElement("div");
+    row.className = "inputRow";
+
+    const input = document.createElement("input");
+    input.id = "freeInput";
+    input.placeholder = q.placeholder || "Escribe tu respuesta";
+
+    const btn = document.createElement("button");
+    btn.textContent = "Verificar";
+    btn.className = "btn primary";
+
+    btn.addEventListener("click", () => this.answerInput(input.value));
+
+    row.appendChild(input);
+    row.appendChild(btn);
+    this.el.qBody.appendChild(row);
+  }
+
+  this.el.btnSkip.disabled = false;
+}
+
+
   answerMCQ(index){
-  if(!this.lastQuestion) return;
+ if(!this.lastQuestion || this.awaitingNext) return;
+
   const res = this.quiz.submitAnswer(this.lastQuestion, { index });
+
+  const choices = this.el.qBody.querySelectorAll(".choice");
+
+  // 🔒 Bloquear opciones
+  choices.forEach(btn => btn.disabled = true);
 
   if(res.correct){
     this.setFeedback("ok", res.title, res.desc);
 
-    // ✨ EFECTO SPARKLE EN EL AVATAR
     this.el.hudAvatar.classList.remove("sparkle");
-    void this.el.hudAvatar.offsetWidth; // fuerza reflow para reiniciar animación
+    void this.el.hudAvatar.offsetWidth;
     this.el.hudAvatar.classList.add("sparkle");
 
   } else {
     this.setFeedback("bad", res.title, res.desc);
+
+    // 🎯 Marcar la correcta
+    const correctBtn = choices[this.lastQuestion.answerIndex];
+    if(correctBtn){
+      correctBtn.classList.add("correct-answer");
+    }
   }
 
   if(res.endedByLives){
-    this.setFeedback("bad", "Te quedaste sin vidas", "Reinicia el nivel para intentarlo de nuevo y revisa las explicaciones.");
+
+  this.setFeedback("bad", "Te quedaste sin vidas", "Juego terminado.");
+
+  // 🔥 Guardar en podio
+  if(this.quiz.user){
+    this.podiumService.savePlayer({
+      username: this.quiz.user.username,
+      points: this.quiz.points
+    });
+  }
+
+  // 🔥 Mostrar podio
+  this.renderPodium();
+
+  this.el.btnNext.disabled = true;
+  this.el.btnSkip.disabled = true;
+  this.renderHUD();
+  return;
+}
+
+  this.awaitingNext = true;
+  this.el.btnNext.disabled = false;
+  this.el.btnSkip.disabled = true;
+  this.renderHUD();
+}
+
+
+answerInput(value){
+  if(!this.lastQuestion || this.awaitingNext) return;
+
+  const res = this.quiz.submitAnswer(this.lastQuestion, { value });
+
+  const input = document.getElementById("freeInput");
+  const btn = this.el.qBody.querySelector("button");
+
+  // 🔒 Bloquear input y botón
+  if(input) input.disabled = true;
+  if(btn) btn.disabled = true;
+
+  if(res.correct){
+
+    this.setFeedback("ok", res.title, res.desc);
+
+    // ✨ Animación avatar
+    this.el.hudAvatar.classList.remove("sparkle");
+    void this.el.hudAvatar.offsetWidth;
+    this.el.hudAvatar.classList.add("sparkle");
+
+  } else {
+
+    this.setFeedback("bad", res.title, res.desc);
+  }
+
+  // 💀 Si se quedó sin vidas
+  if(res.endedByLives){
+
+    this.setFeedback("bad", "Te quedaste sin vidas", "Juego terminado.");
+
+    // 🔥 Guardar en podio
+    if(this.quiz.user){
+      this.podiumService.savePlayer({
+        username: this.quiz.user.username,
+        points: this.quiz.points
+      });
+    }
+
+    // 🔥 Mostrar podio
+    this.renderPodium();
+
     this.el.btnNext.disabled = true;
     this.el.btnSkip.disabled = true;
     this.renderHUD();
@@ -361,35 +488,6 @@ bindEvents(){
 }
 
 
-  answerInput(value){
-    if(!this.lastQuestion) return;
-    const res = this.quiz.submitAnswer(this.lastQuestion, { value });
-
-   if(res.correct){
-  this.setFeedback("ok", res.title, res.desc);
-
-  this.el.hudAvatar.classList.remove("sparkle");
-  void this.el.hudAvatar.offsetWidth;
-  this.el.hudAvatar.classList.add("sparkle");
-
-} else {
-  this.setFeedback("bad", res.title, res.desc);
-}
-
-    if(res.endedByLives){
-      this.setFeedback("bad", "Te quedaste sin vidas", "Reinicia el nivel para intentarlo de nuevo y revisa las explicaciones.");
-      this.el.btnNext.disabled = true;
-      this.el.btnSkip.disabled = true;
-      this.renderHUD();
-      return;
-    }
-
-    this.awaitingNext = true;
-    this.el.btnNext.disabled = false;
-    this.el.btnSkip.disabled = true;
-    this.renderHUD();
-  }
-
   skip(){
     if(!this.lastQuestion) return;
     const res = this.quiz.skipQuestion(this.lastQuestion);
@@ -398,12 +496,23 @@ bindEvents(){
 
     if(res.endedByLives){
       this.setFeedback("bad", "Te quedaste sin vidas", "Reinicia el nivel y reintenta con calma.");
+
+      // 🔥 Guardar en podio
+      if(this.quiz.user){
+        this.podiumService.savePlayer({
+          username: this.quiz.user.username,
+          points: this.quiz.points
+        });
+      }
+
+      // 🔥 Mostrar podio
+      this.renderPodium();
+
       this.el.btnNext.disabled = true;
       this.el.btnSkip.disabled = true;
       this.renderHUD();
       return;
     }
-
     this.el.btnNext.disabled = false;
     this.el.btnSkip.disabled = true;
     this.renderHUD();
@@ -419,8 +528,6 @@ bindEvents(){
       }
       return;
     }
-
-    // seguir con la siguiente pregunta
     this.clearFeedback();
     this.renderAll();
   }
