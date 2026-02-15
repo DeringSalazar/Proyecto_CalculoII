@@ -310,3 +310,26 @@ const quiz = new QuizEngine(storage, toast, bank);
 const ui = new UIController({ toast, auth, quiz, avatarService });
 
 ui.init();
+
+// Reglas: abrir/cerrar overlay modal
+const btnRules = document.getElementById("btnRules");
+const rulesOverlay = document.getElementById("rulesOverlay");
+const btnCloseRules = document.getElementById("btnCloseRules");
+
+function openRules() {
+  if (rulesOverlay) rulesOverlay.classList.add("show");
+}
+
+function closeRules() {
+  if (rulesOverlay) rulesOverlay.classList.remove("show");
+}
+
+if (btnRules) btnRules.addEventListener("click", (e) => { e.preventDefault(); openRules(); });
+if (btnCloseRules) btnCloseRules.addEventListener("click", () => closeRules());
+if (rulesOverlay) {
+  rulesOverlay.addEventListener("click", (e) => {
+    if (e.target === rulesOverlay) closeRules();
+  });
+}
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeRules(); });

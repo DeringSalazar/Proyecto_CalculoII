@@ -59,8 +59,6 @@ export class UIController {
       outfitPicker: this.$("#outfitPicker"),   // 👈 NUEVO
       colorPicker: this.$("#colorPicker"),
 
-
-      rulesCard: this.$("#rulesCard")
     };
 
     this.lastQuestion = null;
@@ -72,45 +70,11 @@ export class UIController {
     this.mountAvatarPickers();
     this.restoreSessionIfAny();
     this.renderAll();
-    this.el.rulesCard.classList.add("rulesHidden");
     this.el.btnRules.setAttribute("aria-expanded","false");
-    // Arrancar con reglas ocultas y preguntas centradas
-this.el.rulesCard.classList.add("rulesHidden");
-this.el.rulesCard.style.display = "none";
-
-const grid = document.querySelector("main.grid");
-grid.style.gridTemplateColumns = "minmax(0, 760px)";
-grid.style.justifyContent = "center";
-
-this.el.btnRules.setAttribute("aria-expanded","false");
 
   }
 
-  toggleRules(){
-  const grid = document.querySelector("main.grid");
-
-  const willHide = !this.el.rulesCard.classList.contains("rulesHidden");
-
-  if(willHide){
-    // Ocultar: quitar del layout (NO solo invisible)
-    this.el.rulesCard.classList.add("rulesHidden");
-    this.el.rulesCard.style.display = "none";
-
-    // Centrar preguntas
-    grid.style.gridTemplateColumns = "minmax(0, 760px)";
-    grid.style.justifyContent = "center";
-  } else {
-    // Mostrar: volver al layout
-    this.el.rulesCard.classList.remove("rulesHidden");
-    this.el.rulesCard.style.display = "";
-
-    // Regresar a 2 columnas
-    grid.style.gridTemplateColumns = "";
-    grid.style.justifyContent = "";
-  }
-
-  this.el.btnRules.setAttribute("aria-expanded", willHide ? "false" : "true");
-}
+  // Rules panel removed: modal handles rules display
 
 
 bindEvents(){
@@ -119,8 +83,7 @@ bindEvents(){
   this.el.btnCloseAuth1.addEventListener("click", () => this.closeAuth());
   this.el.btnCloseAuth2.addEventListener("click", () => this.closeAuth());
 
-  // ✅ SOLO ESTE PARA REGLAS
-  this.el.btnRules.addEventListener("click", () => this.toggleRules());
+  // Rules handled by modal; no local toggle listener
 
   // tabs
   this.el.tabLogin.addEventListener("click", () => this.switchTab("login"));

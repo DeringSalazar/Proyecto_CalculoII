@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="es">
+
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -60,7 +61,9 @@
 
           <div class="stat">
             <div class="k">Progreso del nivel</div>
-            <div class="bar"><div id="progressBar"></div></div>
+            <div class="bar">
+              <div id="progressBar"></div>
+            </div>
             <div class="small" id="progressText" style="margin-top:6px;">—</div>
           </div>
         </div>
@@ -91,26 +94,7 @@
         </div>
       </section>
 
-      <!-- Rules -->
-      <aside class="card" id="rulesCard">
-        <h2>Reglas de uso (compañeros y docente)</h2>
-        <div class="rules">
-          <div class="rule"><b>1) Honestidad académica:</b> no copiar; aprende del error.</div>
-          <div class="rule"><b>2) Retroalimentación obligatoria:</b> revisa el porqué del fallo antes de seguir.</div>
-          <div class="rule"><b>3) Respeto:</b> errores ≠ burlas.</div>
-          <div class="rule"><b>4) Docente:</b> puede solicitar evidencia (nivel/puntos).</div>
-          <div class="rule"><b>5) Sugerencia:</b> 15–25 min por sesión.</div>
-        </div>
-
-        <div class="divider"></div>
-
-        <h2>Cómo se gana</h2>
-        <div class="rules">
-          <div class="rule"><b>Puntos:</b> +10 fácil, +15 medio, +20 difícil.</div>
-          <div class="rule"><b>Vidas:</b> 3 por nivel. Error u omitir = −1 vida.</div>
-          <div class="rule"><b>Avance:</b> completa el nivel para subir de dificultad.</div>
-        </div>
-      </aside>
+      <!-- Rules panel removed: rules are shown via modal only -->
     </main>
   </div>
 
@@ -158,29 +142,29 @@
 
             <div class="divider"></div>
 
-<div class="avatarPicker">
+            <div class="avatarPicker">
 
-  <div class="muted" style="font-size:12px; font-weight:800;">
-    Elige tu estilo
-  </div>
-  <div class="faces" id="facePicker"></div>
+              <div class="muted" style="font-size:12px; font-weight:800;">
+                Elige tu estilo
+              </div>
+              <div class="faces" id="facePicker"></div>
 
-  <!-- 👇 AQUI VA LA ROPA -->
-  <div class="muted" style="font-size:12px; font-weight:800;">
-    Elige ropa
-  </div>
-  <div class="outfits" id="outfitPicker"></div>
+              <!-- 👇 AQUI VA LA ROPA -->
+              <div class="muted" style="font-size:12px; font-weight:800;">
+                Elige ropa
+              </div>
+              <div class="outfits" id="outfitPicker"></div>
 
-  <div class="muted" style="font-size:12px; font-weight:800;">
-    Elige un color
-  </div>
-  <div class="swatches" id="colorPicker"></div>
+              <div class="muted" style="font-size:12px; font-weight:800;">
+                Elige un color
+              </div>
+              <div class="swatches" id="colorPicker"></div>
 
-  <div class="muted" style="font-size:12px;">
-    Se guarda con tu cuenta (local). Para tareas, esto es suficiente.
-  </div>
+              <div class="muted" style="font-size:12px;">
+                Se guarda con tu cuenta (local). Para tareas, esto es suficiente.
+              </div>
 
-</div>
+            </div>
 
 
             <button class="btn primary" id="btnRegister">Crear cuenta</button>
@@ -203,6 +187,31 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
+  <!-- Reglas: overlay modal -->
+  <div class="overlay" id="rulesOverlay" role="dialog" aria-modal="true" aria-label="Reglas">
+    <div class="card" style="max-width:820px; width:100%; position:relative;">
+      <button class="btn ghost" id="btnCloseRules" style="position:absolute; right:12px; top:12px;">Cerrar</button>
+      <h2>Reglas de uso (compañeros y docente)</h2>
+      <div class="rules">
+        <div class="rule"><b>1) Honestidad académica:</b> no copiar; aprende del error.</div>
+        <div class="rule"><b>2) Retroalimentación obligatoria:</b> revisa el porqué del fallo antes de seguir.</div>
+        <div class="rule"><b>3) Respeto:</b> errores ≠ burlas.</div>
+        <div class="rule"><b>4) Docente:</b> puede solicitar evidencia (nivel/puntos).</div>
+        <div class="rule"><b>5) Sugerencia:</b> 15–25 min por sesión.</div>
+      </div>
+
+      <div class="divider"></div>
+
+      <h2>Cómo se gana</h2>
+      <div class="rules">
+        <div class="rule"><b>Puntos:</b> +10 fácil, +15 medio, +20 difícil.</div>
+        <div class="rule"><b>Vidas:</b> 3 por nivel. Error u omitir = −1 vida.</div>
+        <div class="rule"><b>Avance:</b> completa el nivel para subir de dificultad.</div>
+      </div>
+    </div>
+  </div>
+
   <script type="module" src="js/main.js"></script>
 </body>
+
 </html>
