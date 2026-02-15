@@ -11,6 +11,9 @@ export class QuizEngine {
 
     this.answeredPrompts = new Set();
     this.levelQuestions = [];
+
+    this.correctCount = 0;
+    this.incorrectCount = 0;
   }
 
   isLoggedIn(){ return !!this.user; }
@@ -45,7 +48,7 @@ export class QuizEngine {
     const users = this.storage.loadUsers();
     if(!users[this.user.username]) return;
 
-    users[this.user.username].progress = { level: this.level, points: this.points };
+    users[this.user.username].progress = { level: this.level, points: this.points,correct: this.correctCount, incorrect: this.incorrectCount };
     this.storage.saveUsers(users);
   }
 
@@ -103,6 +106,7 @@ export class QuizEngine {
   if(correct){
     const earned = question.points ?? 10;
     this.points += earned;
+    this.correctCount++;
     this.persistProgress();
 
     return {

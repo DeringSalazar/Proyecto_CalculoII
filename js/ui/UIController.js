@@ -111,12 +111,13 @@ bindEvents(){
 }
 
 // Esto es para el podio gente 
-createPodiumContainer(){
-  if(!document.getElementById("podiumContainer")){
+createPodiumPanel(){
+  if(!document.getElementById("podiumPanel")){
     const div = document.createElement("div");
-    div.id = "podiumContainer";
+    div.id = "podiumPanel";
+    div.className = "podium-panel";
     div.innerHTML = `
-      <h2>🏆 Podio Global</h2>
+      <h2>🏆 Podio Global Detallado</h2>
       <div id="podiumList" class="podium-list"></div>
     `;
     document.body.appendChild(div);
@@ -124,7 +125,7 @@ createPodiumContainer(){
 }
 
 renderPodium(){
-  this.createPodiumContainer();
+  this.createPodiumPanel();
 
   const list = document.getElementById("podiumList");
   list.innerHTML = "";
@@ -142,16 +143,17 @@ renderPodium(){
     const item = document.createElement("div");
     item.className = "podium-item";
     item.innerHTML = `
-      <h3>${medal} ${position}° Lugar</h3>
-      <p>👤 ${player.username}</p>
-      <p>⭐ ${player.points} pts</p>
+      <h3>${medal} ${position}° Lugar — ${player.username}</h3>
+      <p>⭐ Puntos: ${player.points}</p>
+      <p>🏅 Nivel: ${player.level}</p>
+      <p>❤ Vidas: ${player.lives}</p>
+      <p>✅ Correctas: ${player.correct}</p>
+      <p>❌ Incorrectas: ${player.incorrect}</p>
     `;
 
     list.appendChild(item);
   });
 }
-
-
 
  mountAvatarPickers(){
   this.avatarService.mountPickers({
@@ -278,23 +280,23 @@ renderPodium(){
     this.el.fbDesc.textContent = desc;
   }
 
-  renderQuestion(){
+renderQuestion() {
   this.el.btnNext.disabled = true;
   this.el.btnSkip.disabled = true;
   this.awaitingNext = false;
   this.lastQuestion = null;
 
-  if(!this.quiz.isLoggedIn()){
+  if (!this.quiz.isLoggedIn()) {
     this.el.qPrompt.textContent = "Inicia sesión para comenzar.";
     this.el.qBody.innerHTML = "";
     return;
   }
 
   // 🟢 NIVEL COMPLETADO
-  if(this.quiz.isLevelComplete()){
+  if (this.quiz.isLevelComplete()) {
 
     // Puede avanzar de nivel
-    if(this.quiz.canAdvance()){
+    if (this.quiz.canAdvance()) {
       this.setFeedback("ok", "¡Nivel completado!", "Presiona “Siguiente” para avanzar.");
       this.el.btnNext.disabled = false;
       return;
@@ -303,15 +305,19 @@ renderPodium(){
     // 🏆 JUEGO COMPLETADO TOTAL
     this.setFeedback("ok", "¡Juego completado!", "Terminaste todos los niveles.");
 
-    // 🔥 Guardar en podio
-    if(this.quiz.user){
+    // 🔥 Guardar datos completos en podio
+    if (this.quiz.user) {
       this.podiumService.savePlayer({
         username: this.quiz.user.username,
-        points: this.quiz.points
+        points: this.quiz.points,
+        level: this.quiz.level,
+        lives: this.quiz.lives,
+        correct: this.quiz.correctCount,
+        incorrect: this.quiz.incorrectCount
       });
     }
 
-    // 🔥 Mostrar podio
+    // 🔥 Mostrar podio en panel flotante
     this.renderPodium();
 
     this.el.btnNext.disabled = true;
@@ -321,7 +327,7 @@ renderPodium(){
 
   // 🔵 Cargar siguiente pregunta
   const q = this.quiz.getNextQuestion();
-  if(!q){
+  if (!q) {
     this.el.qPrompt.textContent = "Sin preguntas disponibles.";
     this.el.qBody.innerHTML = "";
     return;
@@ -334,7 +340,7 @@ renderPodium(){
   // ===============================
   // MULTIPLE CHOICE
   // ===============================
-  if(q.type === "mcq"){
+  if (q.type === "mcq") {
     const wrap = document.createElement("div");
     wrap.className = "choices";
 
@@ -355,7 +361,7 @@ renderPodium(){
   // ===============================
   // INPUT TYPE
   // ===============================
-  if(q.type === "input"){
+  if (q.type === "input") {
     const row = document.createElement("div");
     row.className = "inputRow";
 
@@ -378,8 +384,11 @@ renderPodium(){
 }
 
 
-  answerMCQ(index){
- if(!this.lastQuestion || this.awaitingNext) return;
+// ============================
+// RESPONDER OPCIONES MÚLTIPLES
+// ============================
+answerMCQ(index) {
+  if (!this.lastQuestion || this.awaitingNext) return;
 
   const res = this.quiz.submitAnswer(this.lastQuestion, { index });
 
@@ -388,9 +397,10 @@ renderPodium(){
   // 🔒 Bloquear opciones
   choices.forEach(btn => btn.disabled = true);
 
-  if(res.correct){
+  if (res.correct) {
     this.setFeedback("ok", res.title, res.desc);
 
+    // ✨ Animación avatar
     this.el.hudAvatar.classList.remove("sparkle");
     void this.el.hudAvatar.offsetWidth;
     this.el.hudAvatar.classList.add("sparkle");
@@ -400,31 +410,35 @@ renderPodium(){
 
     // 🎯 Marcar la correcta
     const correctBtn = choices[this.lastQuestion.answerIndex];
-    if(correctBtn){
+    if (correctBtn) {
       correctBtn.classList.add("correct-answer");
     }
   }
 
-  if(res.endedByLives){
+  // 💀 Si se quedó sin vidas
+  if (res.endedByLives) {
+    this.setFeedback("bad", "Te quedaste sin vidas", "Juego terminado.");
 
-  this.setFeedback("bad", "Te quedaste sin vidas", "Juego terminado.");
+    // 🔥 Guardar en podio con todos los datos
+    if (this.quiz.user) {
+      this.podiumService.savePlayer({
+        username: this.quiz.user.username,
+        points: this.quiz.points,
+        level: this.quiz.level,
+        lives: this.quiz.lives,
+        correct: this.quiz.correctCount,
+        incorrect: this.quiz.incorrectCount
+      });
+    }
 
-  // 🔥 Guardar en podio
-  if(this.quiz.user){
-    this.podiumService.savePlayer({
-      username: this.quiz.user.username,
-      points: this.quiz.points
-    });
+    // 🔥 Mostrar podio
+    this.renderPodium();
+
+    this.el.btnNext.disabled = true;
+    this.el.btnSkip.disabled = true;
+    this.renderHUD();
+    return;
   }
-
-  // 🔥 Mostrar podio
-  this.renderPodium();
-
-  this.el.btnNext.disabled = true;
-  this.el.btnSkip.disabled = true;
-  this.renderHUD();
-  return;
-}
 
   this.awaitingNext = true;
   this.el.btnNext.disabled = false;
@@ -433,8 +447,11 @@ renderPodium(){
 }
 
 
-answerInput(value){
-  if(!this.lastQuestion || this.awaitingNext) return;
+// ============================
+// RESPONDER INPUT
+// ============================
+answerInput(value) {
+  if (!this.lastQuestion || this.awaitingNext) return;
 
   const res = this.quiz.submitAnswer(this.lastQuestion, { value });
 
@@ -442,11 +459,10 @@ answerInput(value){
   const btn = this.el.qBody.querySelector("button");
 
   // 🔒 Bloquear input y botón
-  if(input) input.disabled = true;
-  if(btn) btn.disabled = true;
+  if (input) input.disabled = true;
+  if (btn) btn.disabled = true;
 
-  if(res.correct){
-
+  if (res.correct) {
     this.setFeedback("ok", res.title, res.desc);
 
     // ✨ Animación avatar
@@ -455,20 +471,140 @@ answerInput(value){
     this.el.hudAvatar.classList.add("sparkle");
 
   } else {
-
     this.setFeedback("bad", res.title, res.desc);
   }
 
   // 💀 Si se quedó sin vidas
-  if(res.endedByLives){
-
+  if (res.endedByLives) {
     this.setFeedback("bad", "Te quedaste sin vidas", "Juego terminado.");
 
-    // 🔥 Guardar en podio
-    if(this.quiz.user){
+    // 🔥 Guardar en podio con todos los datos
+    if (this.quiz.user) {
       this.podiumService.savePlayer({
         username: this.quiz.user.username,
-        points: this.quiz.points
+        points: this.quiz.points,
+        level: this.quiz.level,
+        lives: this.quiz.lives,
+        correct: this.quiz.correctCount,
+        incorrect: this.quiz.incorrectCount
+      });
+    }
+
+    // 🔥 Mostrar podio
+    this.renderPodium();
+
+    this.el.btnNext.disabled = true;
+    this.el.btnSkip.disabled = true;
+    this.renderHUD();
+    return;
+  }
+
+  this.awaitingNext = true;
+  this.el.btnNext.disabled = false;
+  this.el.btnSkip.disabled = true;
+  this.renderHUD();
+}
+
+
+
+
+  answerMCQ(index) {
+  if (!this.lastQuestion || this.awaitingNext) return;
+
+  const res = this.quiz.submitAnswer(this.lastQuestion, { index });
+
+  const choices = this.el.qBody.querySelectorAll(".choice");
+
+  // 🔒 Bloquear opciones
+  choices.forEach(btn => btn.disabled = true);
+
+  if (res.correct) {
+    this.setFeedback("ok", res.title, res.desc);
+
+    // ✨ Animación avatar
+    this.el.hudAvatar.classList.remove("sparkle");
+    void this.el.hudAvatar.offsetWidth;
+    this.el.hudAvatar.classList.add("sparkle");
+
+  } else {
+    this.setFeedback("bad", res.title, res.desc);
+
+    // 🎯 Marcar la correcta
+    const correctBtn = choices[this.lastQuestion.answerIndex];
+    if (correctBtn) {
+      correctBtn.classList.add("correct-answer");
+    }
+  }
+
+  // 💀 Si se quedó sin vidas
+  if (res.endedByLives) {
+    this.setFeedback("bad", "Te quedaste sin vidas", "Juego terminado.");
+
+    // 🔥 Guardar en podio con todos los datos
+    if (this.quiz.user) {
+      this.podiumService.savePlayer({
+        username: this.quiz.user.username,
+        points: this.quiz.points,
+        level: this.quiz.level,
+        lives: this.quiz.lives,
+        correct: this.quiz.correctCount,
+        incorrect: this.quiz.incorrectCount
+      });
+    }
+
+    // 🔥 Mostrar podio
+    this.renderPodium();
+
+    this.el.btnNext.disabled = true;
+    this.el.btnSkip.disabled = true;
+    this.renderHUD();
+    return;
+  }
+
+  this.awaitingNext = true;
+  this.el.btnNext.disabled = false;
+  this.el.btnSkip.disabled = true;
+  this.renderHUD();
+}
+
+
+answerInput(value) {
+  if (!this.lastQuestion || this.awaitingNext) return;
+
+  const res = this.quiz.submitAnswer(this.lastQuestion, { value });
+
+  const input = document.getElementById("freeInput");
+  const btn = this.el.qBody.querySelector("button");
+
+  // 🔒 Bloquear input y botón
+  if (input) input.disabled = true;
+  if (btn) btn.disabled = true;
+
+  if (res.correct) {
+    this.setFeedback("ok", res.title, res.desc);
+
+    // ✨ Animación avatar
+    this.el.hudAvatar.classList.remove("sparkle");
+    void this.el.hudAvatar.offsetWidth;
+    this.el.hudAvatar.classList.add("sparkle");
+
+  } else {
+    this.setFeedback("bad", res.title, res.desc);
+  }
+
+  // 💀 Si se quedó sin vidas
+  if (res.endedByLives) {
+    this.setFeedback("bad", "Te quedaste sin vidas", "Juego terminado.");
+
+    // 🔥 Guardar en podio con todos los datos
+    if (this.quiz.user) {
+      this.podiumService.savePlayer({
+        username: this.quiz.user.username,
+        points: this.quiz.points,
+        level: this.quiz.level,
+        lives: this.quiz.lives,
+        correct: this.quiz.correctCount,
+        incorrect: this.quiz.incorrectCount
       });
     }
 
